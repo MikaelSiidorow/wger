@@ -1,0 +1,22 @@
+name: Sync upstream master
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-master
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fast-forward master from upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh repo sync "${GITHUB_REPOSITORY}" --branch master
