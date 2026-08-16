@@ -1,6 +1,7 @@
 name: Build production image
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - production
@@ -49,3 +50,38 @@ jobs:
             BUILD_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  promote-production:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote production tag
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/mikaelsiidorow/wger:production \
+            ghcr.io/mikaelsiidorow/wger:sha-${{ github.sha }}
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: promote-production
+    uses: MikaelSiidorow/infra/.github/workflows/k8s-rollout.yml@main
+    with:
+      namespace: wger
+      deployments: wger-web,wger-celery-worker,wger-celery-beat
+    secrets:
+      HEADSCALE_PREAUTH_KEY: ${{ secrets.HEADSCALE_AUTH_KEY }}
+      K8S_DEPLOY_KUBECONFIG: ${{ secrets.K8S_DEPLOY_KUBECONFIG }}
