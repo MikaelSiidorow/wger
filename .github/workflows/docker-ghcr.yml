@@ -78,7 +78,7 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch'
     needs: promote-production
-    uses: MikaelSiidorow/infra/.github/workflows/k8s-rollout.yml@main
+    uses: MikaelSiidorow/systems/.github/workflows/k8s-rollout.yml@main
     with:
       namespace: wger
       deployments: wger-web,wger-celery-worker,wger-celery-beat
